@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>html5chart</title>
+	
+    <meta http-equiv="keywords" content="">
+    <meta http-equiv="description" content="">
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <link rel="stylesheet" href="style/style.css" type="text/css">
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="http://code.jquery.com/jquery-migrate-1.1.1.min.js"></script>
+    <!-- <script src="js/d3.v2.js"></script>-->
+    <script src="js/modernizr.min.js"></script>
+    <script src="js/astrow.js"></script>
+    <script>
+
+       
+       function updateCombos(data, type) {
+           if (!data) {
+              return;
+           }
+           if (type=='Transits') {
+               var sel = document.getElementById("tdate");
+               var opt;
+               sel.options.length=0;
+               for (var i = 0; i < data.transits.length; i++) {
+                   opt = new Option();
+                   opt.value = i;
+                   if (i == 0) {
+                      opt.selected = true;
+                   }
+                   opt.text = data.transits[i].date;
+                   sel.add(opt);
+               }
+               $("#transdate").css('display','block');
+           }
+           else {
+               $("#transdate").css('display','none');
+           }
+           if (type=='Compatability') {
+              var sel = document.getElementById("primary");
+              sel.options.length=0;
+              var opt = new Option();
+              opt.text = data.natal.name1;
+              opt.value= '1';
+              opt.selected=true;
+              sel.add(opt);
+              opt = new Option();
+              opt.text = data.natal.name2;
+              opt.value= '2';
+              opt.selected=false;
+              sel.add(opt);
+              $("#compatname").css('display','block');
+           }
+           else {
+              $("#compatname").css('display','none');
+           }       
+       }
+       
+       function drawChart(file,glyphs,theme) {
+           $("#selectchart").css('display','none');
+           $("#chart").height(window.innerHeight-100);
+           if (canvasExists()==false) {
+               var width = $("#chart").width();
+               var height = window.innerHeight-100;
+               var canvas = jQuery("<canvas id='canvas' width=\"" + width + "\" height=\"" + height + "\"/>");
+               $("#chart").append(canvas);
+           }
+           window.cjnoyessw.loader.load(file, function(status) {
+      		   var data = window.cjnoyessw.loader.getData();
+      		   var header = window.cjnoyessw.loader.getFileHeader();
+      		   console.log(header);
+      		   $("#tdname").replaceWith("<td id=\"tdname\">" +header.name + "</td>");
+      		   $("#tdcomments").replaceWith("<td id=\"tdcomments\">" +header.comment + "</td>");
+      		   $("#tdtype").replaceWith("<td id=\"tdtype\">" +header.strType + "</td>");
+      		   var list = cjnoyessw.datacalc.getList(data.strType);
+      	       cjnoyessw.configuration.setGlyphs(glyphs);
+      		   var wheel = cjnoyessw.cartwheel.init("#canvas");
+      		   if (wheel==false) {
+      		      return;
+      		   }
+      		   var sel = document.getElementById('tdate');
+               var val = 0;
+               if (sel && sel.selectedIndex !=-1) {
+                  val = sel.options[sel.selectedIndex].value;
+      		      val = parseInt(val);
+      		      data.chartIndex = val;
+      		   }
+      		   
+      		   sel = document.getElementById('primary');
+      		   if (sel && sel.selectedIndex !=-1) {
+      		      val = sel.options[sel.selectedIndex].value
+      		      console.log(val);
+      		      if (val=='2') {
+      		         cjnoyessw.configuration.setInner(true);
+      		      }
+      		      else {
+      		         cjnoyessw.configuration.setInner(false);
+      		      }
+      		   
+      		   }
+      		   cjnoyessw.colors.setTheme(theme);
+      		   cjnoyessw.datacalc.process(list,data,true);
+      		   wheel.addDrawables(window.cjnoyessw.drawables.getDrawables(data.strType));
+      		   wheel.draw(data);
+      		   window.chartDrawn=1;
+      		   updateCombos(data,header.strType);
+      		});
+       } 
+    
+       function checkBrowser() {
+          if (Modernizr.canvas==true && Modernizr.fontface==true && Modernizr.canvastext==true ) {
+             $("#nohtml5").css("display","none");
+             return true;
+          }
+          else {
+             return false;
+          }
+       }
+    
+    
+       function canvasExists() {
+            if (!window.chartDrawn) {
+               var canvas = $("#canvas");
+               if (canvas.length==0) {
+                  return false;
+               }
+               else {
+                  return true;
+               }
+            }
+            else {
+               return true;
+            }
+       }
+    
+       function showChart() {
+            var glyphs = $("#glyphs").prop("checked");
+            var sel = document.getElementById('example');
+            if (sel.selectedIndex==-1) {
+               return;
+            }
+            var file = sel.options[sel.selectedIndex].value;
+            file = "charts/" + file + ".json";
+            $("#showchart").prop('value','Update');
+            var theme ='blue';
+            sel = document.getElementById('theme');
+            if (sel.selectedIndex!=-1) {
+               theme = sel.options[sel.selectedIndex].value;
+               }
+            var background='#000020';
+            var color = 'white';
+            if (theme=='red') {
+               background = '#200000';
+            }
+            else if (theme=='green') {
+               background= '#002000';
+            }
+            else if (theme =='white') {
+               background= '#f0f0f0';
+               color = 'black';
+            }
+            $("body").css('background-color',background);
+            $("body").css('color',color);   
+            drawChart(file,glyphs,theme);    
+       }
+    
+       function setup() {
+            $("#header").width((window.innerWidth-$("#formdiv").width())-10);
+            $("#chart").width($("header").width());
+            $("#chart").height(window.innerHeight-100);
+            if (checkBrowser()==false) {
+               return false;
+            }
+            return true;
+       }
+    
+       function resize() {
+            if (canvasExists()) {
+               $("#canvas").remove();
+            }
+            if (setup()==false) {
+               return;
+            }
+            if (!window.chartDrawn) {
+               return;
+            }
+            showChart();
+       }    
+    
+       $(document).ready(function() {
+            console.log("ready");
+            if (setup()==true) {
+               $("#showchart").click(showChart);
+      		   $(window).resize(resize);
+            }
+      		
+      		//drawChart("charts/natal.json",true);
+      	});
+     
+    </script>
+  </head>
+  
+  <body>
+    <div id="main">
+    <div id="formdiv">
+    <form name="form">
+    <p><label for="example">Example</label>
+    <select id="example" name="example" autofocus="autofocus">
+    <option value="natal">Natal</option>
+    <option value="compat">Compatibility</option>
+    <option value="composite">Composite</option>
+    <option value="relocation">Relocation</option>
+    <option value="progressed">Progressed</option>
+    <option value="harmonic">Harmonic</option>
+    <option value="solararc">Solar Arc</option>    
+    <option value="transits">Transits #1</option>
+    <option value="transits2">Transits #2</option>
+    </select>
+    </p>
+    <p><label for="glyphs">Show Glyphs</label>
+    <input id="glyphs" type="checkbox" checked="checked" name="glyphs" value="yes"/></p>
+    <p><label for="theme">Color Theme</label>
+    <select id="theme" name="theme">
+    <option value="blue" selected="selected">Blue</option>
+    <option value="red">Red</option>
+    <option value="green">Green</option>
+    <option value="white">White</option>
+    </select></p>
+    <div id="transdate" style="display:none;"><p align="left">Date to Show: <select id="tdate" name="tdate"></select></p></div>
+    <div id="compatname" style="display:none;"><p align="left">Primary Individual: <select id="primary" name="primary"></select></p></div>
+    <p><input type="button" id="showchart" name="show" value="Show Chart" /></p>
+    </form>
+    </div>
+    <div id="right">
+    <div id=header>
+    <table>
+    <tr><th align="left">Name</th><th></th><th align="left">Comments</th><th></th><th align="left">Type</th></tr>
+    <tr><td id="tdname">Name...</td><td width="50">&nbsp;</td><td id="tdcomments">Comments...</td><td width="50">&nbsp;</td><td id="tdtype">Type...</td></tr>
+    </table>
+    </div>
+    <div id="nohtml5">
+    <p align="center">Your browser is too old and does not support modern features, Download Google Chrome or Firefox!</p>
+    </div>
+    <div id="selectchart"><p align="center"><b>Select a chart from the List and click Show Chart!</b></p></div>
+    <div id="chart">
+    </div>
+    </div>
+    </div>
+    <div id="offscreen" class="font">abcdef</div>
+  </body>
+</html>
